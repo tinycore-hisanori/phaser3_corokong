@@ -1,7 +1,7 @@
 # phaser3_corokong
 
 # phaser3_actionadv1
-# Javascriptサンプルゲーム Vol.10「GEt Flag!」
+# Javascriptサンプルゲーム Vol.10「コロコロ♪バッカーズ！！」
  
 Phaser3.jsを使ってHTML5のゲームを作るときに参考にしてもらうためのサンプルゲームです。
 
