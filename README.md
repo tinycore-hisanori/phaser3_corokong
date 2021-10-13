@@ -1,6 +1,5 @@
 # phaser3_corokong
 
-# phaser3_actionadv1
 # Javascriptサンプルゲーム Vol.10「コロコロ♪バッカーズ！！」
  
 Phaser3.jsを使ってHTML5のゲームを作るときに参考にしてもらうためのサンプルゲームです。
@@ -17,8 +16,8 @@ Phaser3標準の「arcade」物理エンジンでは実現できない細かい�
 
 [奪還せよ！コロコロ♪バッカーズ！！](https://tinycore-hisanori.github.io/phaser3_corokong/)
 
-[QR](https://user-images.githubusercontent.com/30931098/137210144-68faaf69-261a-4355-be0d-5095155bdddf.png)
- 
+ ![QR01](https://user-images.githubusercontent.com/30931098/137210144-68faaf69-261a-4355-be0d-5095155bdddf.png)
+
 # Features
  
 技術的なポイントとしては
