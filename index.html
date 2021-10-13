@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="viewport"
+        content="width = device-width, initial-scale = 1.0, minimum-scale = 1, maximum-scale = 1, user-scalable = no, viewport-fit=cover,minimal-ui" />
+    <title></title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/matter-js@0.17.1/build/matter.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/howler@2.2.3/dist/howler.min.js"></script>
+</head>
+
+<style type="text/css">
+    body {
+        background-color: black;
+        min-height: 100vh;
+        min-width: 100vw;
+        height: 100%;
+        width: 100vw;
+        margin: auto;
+    }
+
+    #container {
+        position: absolute;
+        overflow: hidden;
+    }
+</style>
+
+<body>
+    <script>
+        var bgm = new Howl({
+            src: ['bgm.mp3']
+        });
+
+        var bgmOver = new Howl({
+            src: ['gameover.mp3']
+        });
+
+        var bgmClear = new Howl({
+            src: ['clear.mp3']
+        });
+
+        var seBomb = new Howl({
+            src: ['bomb.mp3']
+        });
+
+        var seEat = new Howl({
+            src: ['eat.mp3']
+        });
+
+        var gameWidth = 1280;
+        var gameHeight = 720;
+        var currentScene = null;
+
+        class bombContainer extends Phaser.GameObjects.Container {
+            constructor(scene, x, y, _no, _dir) {
+                //                let _bombObj = scene.add.sprite(0, -10, "bomb");
+                //                super(scene, x, y, _bombObj);
+                //                _bombObj.play("puttingbomb");
+
+                super(scene, x, y);
+                this._bombObj = scene.add.sprite(0, -10, "bomb");
+                this.add(this._bombObj);
+                this._bombObj.play("puttingbomb");
+
+                //container1 = this.add.container(200, 900, [_bombiObj]);
+                this._bodyCircle = scene.matter.add.circle(x, y, 30);//x,y,radius
+                this._bodyObj = scene.matter.add.gameObject(this, this._bodyCircle);
+
+                //(this._bodyObj);
+                this._bodyObj.body.label = "bomb";
+                this._bodyObj.body.noCount = _no;
+                this.noCount = _no;
+                this.cntTime = 0;
+                this._bombObj.isState = STATE_IDLE;
+                scene.add.existing(this._bodyObj);
+                this._bombObj.on('animationcomplete', this.didAnimEnd);
+                if (_dir != 0) {
+                    this._bodyObj.setVelocityX(_dir);
+                }
+
+            }
+            preUpdate() {
+                if (this._bombObj.isState == STATE_IDLE) {
+
+                    this.cntTime = (this.cntTime + 1) % 360;
+                    if (this.cntTime == 0) {
+                        this.doExplosion();
+                    }
+                }
+            }
+            doExplosion() {
+                this._bombObj.isState = STATE_EXPLOSION;
+                seBomb.play();
+                this._bodyCircle.destroy();
+                //this._bodyCircle.isSleeping = true;
+                //this._bodyObj.isSleeping = true;
+                this._bombObj.play("explosionbomb");
+                //                this.destroy();
+            }
+            didAnimEnd() {
+                console.log("SATE = " + this.isState);
+
+                if (this.isState == STATE_EXPLOSION) {
+                    this.play("erasebomb");
+                    this.destroy();
+                }
+            }
+        }
+
+        class enemyContainer extends Phaser.GameObjects.Container {
+            constructor(scene, x, y, _no) {
+                let _tekiObj = scene.add.sprite(0, -10, "teki");
+                super(scene, x, y, _tekiObj);
+                this.setSize(32, 60);
+                this._bodyObj = scene.matter.add.gameObject(this).setFixedRotation();
+                this._bodyObj.body.label = "teki";
+                this._bodyObj.body.isStatic = true;
+                console.log("my object: %o", this._bodyObj);
+                this._bodyObj.body.noCount = _no;
+                this.noCount = _no;
+                this.cntTime = 0;
+
+                scene.add.existing(this._bodyObj);
+                //                scene.add.existing(this);
+            }
+            defeat() {
+                //console.log("defeat");
+                this.destroy();
+                seEat.play();
+                aniChara.play("eatplayer");
+                isState = STATE_EATING;
+            }
+            preUpdate() {
+                this.cntTime = (this.cntTime + 1) % 60;
+                if (this.cntTime == 0) {
+                    if (Math.floor(Math.random() * 101) > 10) {
+
+                    }
+                }
+            }
+        }
+        class titleScene extends Phaser.Scene {
+            constructor() {
+                super({ key: "titleScene", active: true });
+            }
+            preload() {
+                this.load.image("title", "./title.png");
+            }
+            create() {
+                currentScene = this;
+                var bg001 = this.add
+                    .tileSprite(0, 0, gameWidth, gameHeight, 'title')
+                    .setOrigin(0)
+                    .setScrollFactor(0);
+
+                //                let text = this.add
+                //                    .text(200, 100, "Get a flag!")
+                //                    .setFontSize(46)
+                //                    .setColor("#ff0");
+
+                clickButton = this.add
+                    .text(200, 300, "START TO CLICK")
+                    .setStroke("#0000ff", 4)
+                    .setBackgroundColor("#ddbcff")
+                    .setFontSize("40px")
+                    .setColor("#0f0")
+                    .setInteractive();
+                clickButton.on(
+                    "pointerdown",
+                    () => {
+                        this.scene.start("gameScene1");
+                    },
+                    this);
+                this.tweens.add({
+                    targets: clickButton,
+                    alpha: 0.5,
+                    ease: 'Cubic.easeOut',
+                    duration: 500,
+                    repeat: -1,
+                    yoyo: true
+                })
+            }
+
+
+        }
+
+        function tint() {
+            console.log('OK!!');
+
+        }
+        function clearTint() {
+            console.log('OK!!');
+
+        }
+
+
+        class gameScene1 extends Phaser.Scene {
+            constructor() {
+                super({ key: "gameScene1", active: false });
+            }
+            preload() {
+                this.load.image("bg001", "./bg.png");
+                this.load.image("lava", "./lava.png");
+                this.load.spritesheet("slime", "./slime.png", {
+                    frameWidth: 72,
+                    frameHeight: 72
+                });
+                this.load.spritesheet("bomb", "./bomb.png", {
+                    frameWidth: 64,
+                    frameHeight: 64
+                });
+
+                this.load.image("goal", "./goal.png");
+                this.load.spritesheet("teki", "./teki.png", {
+                    frameWidth: 100,
+                    frameHeight: 121
+                });
+                this.load.atlas('sheet', 'ground-data.png', 'ground-data.json');
+                this.load.json('shapes', 'shapes.json');
+
+                let url = 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js';
+                this.load.plugin('rexvirtualjoystickplugin', url, true);
+            }
+
+            pushGamePad() {
+                console.log("push");
+            }
+            dumpJoyStickState() {
+                var cursorKeys = this.joyStick.createCursorKeys();
+                var s = 'Key down: ';
+                var isDetect = false;
+                for (var name in cursorKeys) {
+                    if (cursorKeys[name].isDown) {
+                        s += `${name} `;
+                        if (`${name}` == "right") {
+                            isDetect = true;
+                            pushingKeyCode = 1;
+                        } else if (`${name}` == "left") {
+                            isDetect = true;
+                            pushingKeyCode = 2;
+                        }
+                    }
+                }
+                if (!isDetect) {
+                    pushingKeyCode = 0;
+                }
+                //                console.log(s);
+
+                /*
+                s += `
+Force: ${Math.floor(this.joyStick.force * 100) / 100}
+Angle: ${Math.floor(this.joyStick.angle * 100) / 100}
+`;
+
+                s += '\nTimestamp:\n';
+                for (var name in cursorKeys) {
+                    var key = cursorKeys[name];
+                    s += `${name}: duration=${key.duration / 1000}\n`;
+                }
+*/
+
+            }
+
+
+            create() {
+                currentScene = this;
+
+                timerCnt = 0;
+
+                var bg = this.add
+                    .tileSprite(0, 0, gameWidth, gameHeight, 'bg001')
+                    .setOrigin(0)
+                    .setScrollFactor(0);
+
+                joyStick = this.plugins.get('rexvirtualjoystickplugin').add(this, {
+                    x: 100,
+                    y: 500,
+                    radius: 100,
+                    base: this.add.circle(0, 0, 100, 0x888888),
+                    thumb: this.add.circle(0, 0, 50, 0xcccccc),
+                    // dir: '8dir',   // 'up&down'|0|'left&right'|1|'4dir'|2|'8dir'|3
+                    // forceMin: 16,
+                    // enable: true
+                }).on('update', this.dumpJoyStickState, this).setScrollFactor(0);
+                joyStick.setScrollFactor(0);
+
+                //                let graphics = this.add.graphics();
+                //                actionButton = graphics.fillStyle(0x800000, 1).fillCircle(1000, 60, 50).setScrollFactor(0);
+                actionButton = this.add.circle(1200, 500, 80, 0x6666ff).setScrollFactor(0).setInteractive();
+                //                actionButton.on('pointerdown', tint).on('pointerup', clearTint);
+                actionButton.on("pointerdown",
+                    () => {
+                        pushingJumpBtn = 1;
+                        console.log("OK");
+                    },
+                    this);
+
+                shapes = this.cache.json.get('shapes');
+                this.matter.world.setBounds(-1000, -500, 720, 2000);
+
+                groundBlocks = [];
+                groundBlocks.push(this.matter.add.image(200, 1100, 'sheet', 'part3.png', { shape: shapes.part3 }).setStatic(true));
+                groundBlocks.push(this.matter.add.image(500, 800, 'sheet', 'part2.png', { shape: shapes.part2 }).setStatic(true));
+                groundBlocks.push(this.matter.add.image(400, 500, 'sheet', 'part3.png', { shape: shapes.part3 }).setStatic(true));
+                groundBlocks.push(this.matter.add.image(600, 300, 'sheet', 'part2.png', { shape: shapes.part2 }).setStatic(true));
+                groundBlocks.push(this.matter.add.image(0, 300, 'sheet', 'part1.png', { shape: shapes.part1 }).setStatic(true));
+                groundBlocks.push(this.matter.add.image(600, 300, 'sheet', 'part2.png', { shape: shapes.part2 }).setStatic(true));
+                groundBlocks.push(this.matter.add.image(0, 300, 'sheet', 'part1.png', { shape: shapes.part1 }).setStatic(true));
+                groundBlocks.push(this.matter.add.image(200, 50, 'sheet', 'part1.png', { shape: shapes.part1 }).setStatic(true));
+                groundBlocks.push(this.matter.add.image(400, -200, 'sheet', 'part3.png', { shape: shapes.part3 }).setStatic(true));
+
+                for (var i = 0; i < groundBlocks.length; i++) {
+                    groundBlocks[i].body.label = "ground";
+                }
+
+                aniChara = this.add.sprite(0, 0, "slime");
+                this.anims.create({
+                    key: "walkplayer",
+                    frameRate: 20,
+                    frames: this.anims.generateFrameNumbers("slime", { start: 0, end: 7 }),
+                    repeat: -1
+                });
+                this.anims.create({
+                    key: "eatplayer",
+                    frameRate: 10,
+                    frames: this.anims.generateFrameNumbers("slime", { start: 8, end: 11 }),
+                    repeat: 3
+                });
+                this.anims.create({
+                    key: "stopplayer",
+                    frameRate: 1,
+                    frames: this.anims.generateFrameNumbers("slime", { start: 0, end: 0 }),
+                    repeat: -1
+                });
+
+                this.anims.create({
+                    key: "explosionbomb",
+                    frameRate: 20,
+                    frames: this.anims.generateFrameNumbers("bomb", { start: 1, end: 11 }),
+                    repeat: 0
+                });
+                this.anims.create({
+                    key: "puttingbomb",
+                    frameRate: 1,
+                    frames: this.anims.generateFrameNumbers("bomb", { start: 1, end: 1 }),
+                    repeat: -1
+                });
+                this.anims.create({
+                    key: "erasebomb",
+                    frameRate: 1,
+                    frames: this.anims.generateFrameNumbers("bomb", { start: 0, end: 0 }),
+                    repeat: -1
+                });
+
+                //                const circle = this.add.circle(200, 900, 100, 0xffffff);//x, y, radius, color
+                //                this.matter.add.gameObject(circle, body);
+                tekiArray = [];
+
+                tekiArray[0] = new enemyContainer(this, 200, 900, 1234);
+                tekiArray[1] = new enemyContainer(this, 400, 400, 1235);
+
+                bombArray = [];
+
+                container1 = this.add.container(200, 900, [aniChara]);
+                const bodyCircle = this.matter.add.circle(0, 0, 30);//x,y,radius
+                player = this.matter.add.gameObject(container1, bodyCircle);
+                //                player.setFixedRotation();
+                player.body.label = "cat";
+                aniChara.on('animationcomplete', doAnimEnd);
+
+
+                goalObj = this.matter.add.sprite(450, -250, "goal").setFixedRotation();
+                goalObj.body.label = "goal";
+
+                this.anims.create({
+                    key: "throwbarrel",
+                    frameRate: 10,
+                    frames: this.anims.generateFrameNumbers("teki", { start: 0, end: 6 }),
+                    repeat: 0
+                });
+                tekiObj1 = this.add.sprite(10, 200, "teki");
+                tekiObj2 = this.add.sprite(600, 150, "teki");
+                tekiObj2.flipX = true;
+
+                mainCamera = this.cameras.main;
+                mainCamera.startFollow(player);
+                mainCamera.setFollowOffset(0, 0);
+                cursors = this.input.keyboard.createCursorKeys();
+                SPACE_KEY = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+                remainTime = 100;
+                bGame = true;
+
+                this.matter.world.on("collisionactive", function (e) {
+                    isTouchingGround = false;
+                    //console.log("my object: %o", e);
+                    e.pairs.forEach(function (p) {
+                        if (p.bodyA.label == "cat" || p.bodyB.label == "cat") {
+                            //Check touch on the ground
+                            if ((p.bodyA.parent.label == "ground") || (p.bodyB.parent.label == "ground")) {
+                                //console.log("my object: %o", p);
+                                isTouchingGround = true;
+                            }
+                            else if (p.bodyA.label == "goal" || p.bodyB.label == "goal") {//touch on the goal flag
+                                doGoal();
+                            }
+                            else if (p.bodyA.label == "teki" || p.bodyB.label == "teki") {//touch on the goal flag
+                                if (p.bodyA.label == "teki") {
+                                    //                                    console.log("my object: %o", p.bodyA);
+
+                                    let obj = tekiArray.find(o => o.noCount === p.bodyA.noCount);
+                                    //console.log("my object: %o", obj);
+
+                                    obj.defeat();
+                                } else {
+                                    //                                    console.log("my object: %o", p.bodyB);
+                                    let obj = tekiArray.find(o => o.noCount === p.bodyB.noCount);
+                                    //console.log("my object: %o", obj);
+                                    obj.defeat();
+
+                                    //p.bodyB.defeat();
+                                }
+                            }
+                            else if (p.bodyA.label == "bomb" || p.bodyB.label == "bomb") {//touch on the goal flag
+                                if (p.bodyA.label == "bomb") {
+                                    console.log("my object: %o", p.bodyA);
+
+                                    let obj = bombArray.find(o => o.noCount === p.bodyA.noCount);
+                                    obj.doExplosion();
+                                    injureDamage(obj);
+                                } else {
+                                    console.log("my object: %o", p.bodyB);
+                                    let obj = bombArray.find(o => o.noCount === p.bodyB.noCount);
+                                    //console.log("my object: %o", obj);
+                                    obj.doExplosion();
+                                    injureDamage(obj);
+
+                                    //p.bodyB.defeat();
+                                }
+                            }
+
+                        }
+                    });
+                });
+
+                overlay = this.add
+                    .tileSprite(0, 1900, gameWidth, gameHeight, 'lava');
+
+
+                txtTime = this.add
+                    .text(50, 20, "残り時間：" + remainTime)
+                    .setScrollFactor(0)
+                    .setFontSize(30)
+                    .setStroke("#ffffff", 2)
+                    .setColor("#ffffff");
+
+                txtEnding = this.add
+                    .text(200, 100, "")
+                    .setScrollFactor(0)
+                    .setFontSize(46)
+                    .setColor("#ff0");
+
+                btnReturn = this.add
+                    .text(gameWidth / 2 - 100, 400, " BACK ")
+                    .setScrollFactor(0)
+                    .setFontSize(46)
+                    .setColor("#ff0")
+                    .setBackgroundColor("#aa5500")
+                    .setInteractive();
+                btnReturn.on(
+                    "pointerdown",
+                    () => {
+                        if (bgm != null) {
+                            bgm.stop();
+                        }
+                        if (bgmOver != null) {
+                            bgmOver.stop();
+                        }
+                        this.scene.start("titleScene");
+                    },
+                    this);
+                btnReturn.visible = false;
+
+                bgm.loop(true);
+                bgmOver.loop(true);
+                bgm.play();
+            }
+
+
+            update() {
+                if (bGame == true) {
+                    timerCnt = (timerCnt + 1) % 60;
+                    if (timerCnt == 0) {
+
+                        for (var nLoop = tekiArray.length - 1; nLoop >= 0; nLoop--) {
+                            if (Math.floor(Math.random() * 101) > 10) {
+                                if (tekiArray[nLoop].body) {
+                                    console.log("OBJ= %o", tekiArray[nLoop]);
+                                    bombArray.push(new bombContainer(this, tekiArray[nLoop].x, tekiArray[nLoop].y, bombArray.length, 6 * 2));
+
+                                }
+                            }
+                        }
+
+                        remainTime = remainTime - 1;
+                        txtTime.text = "残り時間：" + remainTime;
+                        if (remainTime <= 0) {
+                            doGameOver();
+                        }
+                    }
+                    overlay.x = player.x;
+                    overlay.setDepth(1);
+                    //overlay.deplth = 999;
+                    //this.game.world.bringToTop(overlay);
+
+                    console.log("KEY=" + pushingKeyCode);
+                    if (cursors.left.isDown || pushingKeyCode == 2) {
+                        aniChara.flipX = true;
+                        player.setVelocityX(-4);
+                        if (isState == STATE_IDLE) {
+                            aniChara.play("walkplayer");
+                            isState = STATE_MOVING;
+                        }
+                    } else if (cursors.right.isDown || pushingKeyCode == 1) {
+                        aniChara.flipX = false;
+                        player.setVelocityX(4);
+                        if (isState == STATE_IDLE) {
+                            aniChara.play("walkplayer");
+                            isState = STATE_MOVING;
+                        }
+                    } else {
+                        //player.setVelocityX(0);
+                        if (isState != STATE_EATING) {
+                            aniChara.play("stopplayer");
+                            isState = STATE_IDLE;
+                        }
+                    }
+                    var bPushJump = false;
+                    if(pushingJumpBtn == 1 || Phaser.Input.Keyboard.JustDown(SPACE_KEY)){
+                        pushingJumpBtn = 0;
+                        bPushJump = true;
+                    }
+                    if (bPushJump == true && isTouchingGround) {
+                        player.setVelocityY(-20);
+                        isTouchingGround = false;
+                    }
+                    //                    if (cursors.up.isDown && isTouchingGround) {
+                    //                        player.setVelocityY(-20);
+                    //                        isTouchingGround = false;
+                    //                    }
+                    if (player.y >= 1350) {
+                        doGameOver();
+                    }
+
+                }
+                actionButton.setDepth(1);
+                //joyStick.setDepth(1);
+            }
+        }
+        doAnimEnd = () => {
+            if (isState == STATE_EATING) {
+                isState = STATE_IDLE;
+                aniChara.play("stopplayer");
+            }
+        }
+
+        function injureDamage(_obj) {
+            if (_obj.x >= player.x && _obj.y >= player.y) {
+                player.setVelocity(-8, -8);
+            } else {
+                player.setVelocity(8, 8);
+
+            }
+        }
+        function doGameOver() {
+            mainCamera.stopFollow();
+            bGame = false;
+            if (bgm != null) {
+                bgm.stop();
+            }
+            txtEnding.text = "GAME OVER";
+            txtEnding.visible = true;
+            btnReturn.visible = true;
+            bgmOver.play();
+        }
+
+        function doGoal() {
+            if (bGame == true) {
+                bGame = false;
+                if (bgm != null) {
+                    bgm.stop();
+                }
+                txtEnding.text = "GAME CLEAR";
+                txtEnding.visible = true;
+                btnReturn.visible = true;
+                bgmClear.play();
+                mainCamera.stopFollow();
+                player.setVelocity(0, 0);
+                player.x = goalObj.x;
+                player.y = goalObj.y;
+                goalObj.destroy(true);
+            }
+        }
+
+        let STATE_IDLE = 0;
+        let STATE_MOVING = 1;
+        let STATE_EATING = 2;
+        let STATE_EXPLOSION = 10;
+        //        let STATE_DAMAGINE = 3;
+        var pushingKeyCode = 0;//0:NONE, 1:RIGHT, 2:LEFT
+        var pushingJumpBtn = 0;//0:NONE, 1:Pushed
+
+        var actionButton;
+        var joyStick;
+
+        var currentScene;
+        var SPACE_KEY;
+        var bGame = false;
+        var timerCnt = 0;
+        var tekiArray = [];
+        var bombArray = [];
+        var overlay;
+        var groundBlocks = [];
+        var isState = STATE_IDLE;
+        var isTouchingGround = false;
+        var remainTime = 0;
+        var txtTime, txtEnding, btnReturn, clickButton;
+        var player, aniChara, container1, goalObj, tekiObj, cursors, mainCamera, shapes, tekiObj1, tekiObj2;
+        var config = {
+            type: Phaser.AUTO,
+            width: gameWidth,
+            height: gameHeight,
+            backgroundColor: "#eaffff",
+            autoResize: true,
+            physics: {
+                default: "matter",
+                matter: {
+                    gravity: {
+                        x: 0, y: 2.5
+                    },
+                    debug: true
+                }
+            },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+            },
+            parent: 'game',
+            audio: { disableWebAudio: true },
+            scene: [titleScene, gameScene1]
+        }
+        var game = new Phaser.Game(config);
+
+    </script>
+</body>
+
+</html>
