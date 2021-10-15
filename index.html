@@ -102,8 +102,6 @@
                 //                this.destroy();
             }
             didAnimEnd() {
-                console.log("SATE = " + this.isState);
-
                 if (this.isState == STATE_EXPLOSION) {
                     this.play("erasebomb");
                     this.destroy();
@@ -113,8 +111,9 @@
 
         class enemyContainer extends Phaser.GameObjects.Container {
             constructor(scene, x, y, _no) {
-                let _tekiObj = scene.add.sprite(0, -10, "teki");
-                super(scene, x, y, _tekiObj);
+                super(scene, x, y);
+                this._tekiObj = scene.add.sprite(0, -10, "teki");
+                this.add(this._tekiObj);
                 this.setSize(32, 60);
                 this._bodyObj = scene.matter.add.gameObject(this).setFixedRotation();
                 this._bodyObj.body.label = "teki";
@@ -127,8 +126,12 @@
                 scene.add.existing(this._bodyObj);
                 //                scene.add.existing(this);
             }
+            playAction(_anim){
+                this._tekiObj.play(_anim);
+
+                //                this._tekiObj.play(_anim);
+            }
             defeat() {
-                //console.log("defeat");
                 this.destroy();
                 seEat.play();
                 aniChara.play("eatplayer");
@@ -188,13 +191,53 @@
 
         }
 
-        function tint() {
-            console.log('OK!!');
 
-        }
-        function clearTint() {
-            console.log('OK!!');
-
+        class lifeBar extends Phaser.GameObjects.Container {
+            constructor(scene, x, y, _width, _height, _maxLife) {
+                super(scene, x, y);
+                this.lifeArray = [];
+                this.maxLife = _maxLife;
+                this.nowLife = _maxLife;
+                
+                for(var i = 0; i < _maxLife; i++){
+                    this.lifeArray.push( scene.add.rectangle( 10 + i * (_width + 2), 30, _width, _height, 0xFF0000).setScrollFactor(0));                
+                    this.add(this.lifeArray[this.lifeArray.length - 1]);
+                }
+                scene.add.existing(this);
+            }     
+            doDamage(){
+                var _setVal = this.nowLife - 1;
+                if(0 > _setVal){
+                    _setVal = 0;
+                }
+                this.setLife(_setVal);
+            }   
+            doCure(){
+                var _setVal = this.nowLife + 1;
+                if(this.maxLife <= _setVal){
+                    _setVal = this.maxLife;
+                }
+                this.setLife(_setVal);
+            }            
+            setLife(_val){
+                this.nowLife = _val;
+                var _setVal = _val;
+                if(this.maxLife <= _val){
+                    _setVal = this.maxLife;
+                }
+                if(_setVal < 0){
+                    _setVal = 0;
+                }
+                this.nowLife = _setVal;
+                let noLifeColor = 0x888888;
+                let LifeColor = 0xFF0000;
+                for(var i = 0; i < this.maxLife; i++){
+                    this.lifeArray[i].setFillStyle(noLifeColor); 
+                }
+                for(var i = 0; i < _setVal; i++){
+                    this.lifeArray[i].setFillStyle(LifeColor); 
+                }
+            }
         }
 
 
@@ -205,20 +248,35 @@
             preload() {
                 this.load.image("bg001", "./bg.png");
                 this.load.image("lava", "./lava.png");
+                this.load.image("moving", "./moving.png");
+
+                this.load.image("goal", "./goal001.png");
+
                 this.load.spritesheet("slime", "./slime.png", {
                     frameWidth: 72,
                     frameHeight: 72
+                });
+                this.load.spritesheet("teki", "./bomber.png", {
+                    frameWidth: 64,
+                    frameHeight: 64
                 });
                 this.load.spritesheet("bomb", "./bomb.png", {
                     frameWidth: 64,
                     frameHeight: 64
                 });
 
+                this.load.spritesheet("cannon", "./cannon.png", {
+                    frameWidth: 64,
+                    frameHeight: 64
+                });
+
+                /*
                 this.load.image("goal", "./goal.png");
                 this.load.spritesheet("teki", "./teki.png", {
                     frameWidth: 100,
                     frameHeight: 121
-                });
+                });*/
+
                 this.load.atlas('sheet', 'ground-data.png', 'ground-data.json');
                 this.load.json('shapes', 'shapes.json');
 
@@ -277,14 +335,11 @@
                 }, this);
                 joyStick.setScrollFactor(0);
 
-                //                let graphics = this.add.graphics();
-                //                actionButton = graphics.fillStyle(0x800000, 1).fillCircle(1000, 60, 50).setScrollFactor(0);
                 actionButton = this.add.circle(1200, 500, 80, 0x6666ff).setScrollFactor(0).setInteractive();
                 //                actionButton.on('pointerdown', tint).on('pointerup', clearTint);
                 actionButton.on("pointerdown",
                     () => {
                         pushingJumpBtn = 1;
-                        console.log("OK");
                     },
                     this);
 
@@ -347,39 +402,55 @@
 
                 //                const circle = this.add.circle(200, 900, 100, 0xffffff);//x, y, radius, color
                 //                this.matter.add.gameObject(circle, body);
-                tekiArray = [];
-
-                tekiArray[0] = new enemyContainer(this, 200, 900, 1234);
-                tekiArray[1] = new enemyContainer(this, 400, 400, 1235);
-
-                bombArray = [];
 
                 container1 = this.add.container(200, 900, [aniChara]);
-                const bodyCircle = this.matter.add.circle(0, 0, 30);//x,y,radius
+                const bodyCircle = this.matter.add.circle(0, 0, 20);//x,y,radius
                 player = this.matter.add.gameObject(container1, bodyCircle);
                 //                player.setFixedRotation();
                 player.body.label = "cat";
                 aniChara.on('animationcomplete', doAnimEnd);
+                player.setBounce(0.0);
 
+//                goalObj = this.matter.add.sprite(450, -250, "goal").setFixedRotation();
+//                goalObj.body.label = "goal";
 
-                goalObj = this.matter.add.sprite(450, -250, "goal").setFixedRotation();
-                goalObj.body.label = "goal";
+                let goalImg = this.add.image(0, 0, 'goal');
+                goalObj = this.add.container(450, -250, [goalImg]);
+                goalObj.setSize(100, 75);
+                let goalObjBody = this.matter.add.gameObject(goalObj);
+                goalObjBody.setFixedRotation();
+                goalObjBody.body.label = "goal";
+                goalObjBody.label = "goal";
 
                 this.anims.create({
                     key: "throwbarrel",
-                    frameRate: 10,
-                    frames: this.anims.generateFrameNumbers("teki", { start: 0, end: 6 }),
+                    frameRate: 5,
+                    frames: this.anims.generateFrameNumbers("teki", { start: 1, end: 7}),
                     repeat: 0
                 });
-                tekiObj1 = this.add.sprite(10, 200, "teki");
-                tekiObj2 = this.add.sprite(600, 150, "teki");
-                tekiObj2.flipX = true;
+                this.anims.create({
+                    key: "staybarrel",
+                    frameRate: 1,
+                    frames: this.anims.generateFrameNumbers("teki", { start: 2, end: 2 }),
+                    repeat: -1
+                });
 
                 mainCamera = this.cameras.main;
                 mainCamera.startFollow(player);
                 mainCamera.setFollowOffset(0, 0);
                 cursors = this.input.keyboard.createCursorKeys();
                 SPACE_KEY = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+
+                tekiArray = [];
+                tekiArray[0] = new enemyContainer(this, 200, 900, 1234);
+                tekiArray[1] = new enemyContainer(this, 400, 400, 1235);
+                tekiArray[0].playAction("staybarrel");
+                tekiArray[1].playAction("staybarrel");
+                bombArray = [];
+
+                tekiArray[0].playAction("throwbarrel");
+                tekiArray[1].playAction("throwbarrel");
 
                 remainTime = 100;
                 bGame = true;
@@ -391,7 +462,6 @@
                         if (p.bodyA.label == "cat" || p.bodyB.label == "cat") {
                             //Check touch on the ground
                             if ((p.bodyA.parent.label == "ground") || (p.bodyB.parent.label == "ground")) {
-                                //console.log("my object: %o", p);
                                 isTouchingGround = true;
                             }
                             else if (p.bodyA.label == "goal" || p.bodyB.label == "goal") {//touch on the goal flag
@@ -399,36 +469,22 @@
                             }
                             else if (p.bodyA.label == "teki" || p.bodyB.label == "teki") {//touch on the goal flag
                                 if (p.bodyA.label == "teki") {
-                                    //                                    console.log("my object: %o", p.bodyA);
-
                                     let obj = tekiArray.find(o => o.noCount === p.bodyA.noCount);
-                                    //console.log("my object: %o", obj);
-
                                     obj.defeat();
                                 } else {
-                                    //                                    console.log("my object: %o", p.bodyB);
                                     let obj = tekiArray.find(o => o.noCount === p.bodyB.noCount);
-                                    //console.log("my object: %o", obj);
                                     obj.defeat();
-
-                                    //p.bodyB.defeat();
                                 }
                             }
                             else if (p.bodyA.label == "bomb" || p.bodyB.label == "bomb") {//touch on the goal flag
                                 if (p.bodyA.label == "bomb") {
-                                    console.log("my object: %o", p.bodyA);
-
                                     let obj = bombArray.find(o => o.noCount === p.bodyA.noCount);
                                     obj.doExplosion();
                                     injureDamage(obj);
                                 } else {
-                                    console.log("my object: %o", p.bodyB);
                                     let obj = bombArray.find(o => o.noCount === p.bodyB.noCount);
-                                    //console.log("my object: %o", obj);
                                     obj.doExplosion();
                                     injureDamage(obj);
-
-                                    //p.bodyB.defeat();
                                 }
                             }
 
@@ -439,6 +495,32 @@
                 overlay = this.add
                     .tileSprite(0, 1900, gameWidth, gameHeight, 'lava');
 
+                let moving001 = this.add.image(0, 0, 'moving');
+                let containerMoving001 = this.add.container(0, 0, [moving001]);
+                containerMoving001.setSize(250, 50);
+                let movingBody001 = this.matter.add.gameObject(containerMoving001);
+                movingBody001.setFixedRotation();
+                movingBody001.body.label = "ground";
+                movingBody001.label = "ground";
+                movingBody001.body.isStatic = true;
+                //movingBody001.setFriction(1, 0, Infinity);
+
+                containerMoving001.startY = 0;
+                this.tweens.addCounter({
+                    targets: containerMoving001,
+                    from: 0,
+                    to: -300,
+                    duration: 1500,
+                    ease: Phaser.Math.Easing.Sine.InOut,
+                    repeat: -1,
+                    yoyo: true,
+                    onUpdate: (tween, target) => {
+                        const y = containerMoving001.startY + target.value
+                        const dy = y - containerMoving001.y;
+                        containerMoving001.y = y;
+                        containerMoving001.setVelocityY(dy) //Very Important!!
+                    }
+                })
 
                 txtTime = this.add
                     .text(50, 20, "残り時間：" + remainTime)
@@ -477,6 +559,9 @@
                 bgm.loop(true);
                 bgmOver.loop(true);
                 bgm.play();
+
+                objLifeBar = new lifeBar(this, 0 , 0 , 8, 50 ,5);//scene, X, Y, width, height, maxLife
+
             }
 
 
@@ -485,12 +570,12 @@
                     timerCnt = (timerCnt + 1) % 60;
                     if (timerCnt == 0) {
 
-                        for (var nLoop = tekiArray.length - 1; nLoop >= 0; nLoop--) {
-                            if (Math.floor(Math.random() * 101) > 10) {
+                        for (var nLoop = 0; nLoop < tekiArray.length; nLoop++) {
+                            if (Math.floor(Math.random() * 101) > 60) {
                                 if (tekiArray[nLoop].body) {
                                     console.log("OBJ= %o", tekiArray[nLoop]);
+                                    tekiArray[nLoop].playAction("throwbarrel");                                    
                                     bombArray.push(new bombContainer(this, tekiArray[nLoop].x, tekiArray[nLoop].y, bombArray.length, 6 * 2));
-
                                 }
                             }
                         }
@@ -502,11 +587,9 @@
                         }
                     }
                     overlay.x = player.x;
-                    overlay.setDepth(1);
                     //overlay.deplth = 999;
                     //this.game.world.bringToTop(overlay);
 
-                    console.log("KEY=" + pushingKeyCode);
                     if (cursors.left.isDown || pushingKeyCode == 2) {
                         aniChara.flipX = true;
                         player.setVelocityX(-4);
@@ -534,18 +617,15 @@
                         bPushJump = true;
                     }
                     if (bPushJump == true && isTouchingGround) {
-                        player.setVelocityY(-20);
+                        player.setVelocityY(-22);
                         isTouchingGround = false;
                     }
-                    //                    if (cursors.up.isDown && isTouchingGround) {
-                    //                        player.setVelocityY(-20);
-                    //                        isTouchingGround = false;
-                    //                    }
                     if (player.y >= 1350) {
                         doGameOver();
                     }
 
                 }
+                overlay.setDepth(1);
                 actionButton.setDepth(1);
                 //joyStick.setDepth(1);
             }
@@ -562,8 +642,8 @@
                 player.setVelocity(-8, -8);
             } else {
                 player.setVelocity(8, 8);
-
             }
+            objLifeBar.doDamage();
         }
         function doGameOver() {
             mainCamera.stopFollow();
@@ -605,6 +685,7 @@
 
         var actionButton;
         var joyStick;
+        var objLifeBar;
 
         var currentScene;
         var SPACE_KEY;
